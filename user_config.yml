@@ -1,0 +1,32 @@
+app:
+  name: "PulseWatch"
+  description: "Real-time anomaly detection for system metrics"
+  refresh_interval: 15   
+
+prometheus:
+  url: "http://localhost:9090/api/v1/query_range"
+
+metrics:
+  cpu:
+   query:
+     Windows: "windows_cpu_time_total"
+     Linux: "node_cpu_seconds_total{mode!='idle'}"
+     Darwin: "node_cpu_seconds_total{mode!='idle'}"
+
+
+  memory:
+    query:
+      Windows: "windows_memory_available_bytes"
+      Linux: "node_memory_MemAvailable_bytes"
+      Darwin: "node_memory_MemAvailable_bytes"
+
+  latency:
+   query:
+     Windows: "windows_physical_disk_write_latency_seconds_total"
+     Linux: "node_disk_io_time_seconds_total"
+     Darwin: "node_disk_io_time_seconds_total"
+
+model:
+  enabled: false
+  path: "backend/app/models/anomaly_model.pkl"
+  type: "classification"  
