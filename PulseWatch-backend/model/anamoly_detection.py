@@ -4,17 +4,13 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
-import sklearn.preprocessing
 from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
 import pandas as pd
 import joblib
 import os
 
-"""Anomaly Detection in Time Series Data using LSTM Autoencoder"""
-
 class LSTMAutoEncoder(nn.Module):
-    def __init__(self, encoding_dim=64, hidden_dim=128, n_features=3, n_layers=2, dropout=0.2):
+    def __init__(self, encoding_dim=128, hidden_dim=256, n_features=3, n_layers=3, dropout=0.3):
         super().__init__()
         self.encoder = nn.LSTM(
             input_size=n_features,
@@ -38,14 +34,12 @@ class LSTMAutoEncoder(nn.Module):
         encoded, _ = self.encoder(x)
         encoded = F.relu(self.encoder_fc(encoded[:, -1, :]))
         decoded = F.relu(self.decoder_fc(encoded))
-        decoded, _ = self.decoder(decoded.unsqueeze(1))
-        decoded = self.out(decoded.squeeze(1))
-        return decoded
-    
-"""Model Wrapping Class"""
+        decoded, _ = self.decoder(decoded.unsqueeze(1).repeat(1, x.size(1), 1))
+        decoded = self.out(decoded)
+        return decoded[:, -1, :]
 
 class MetricPredictor():
-    def __init__(self, feature_cols, seq_len=20, model_path="lstmae.pth", scaler_path="scaler.gz"):
+    def __init__(self, feature_cols, seq_len=30, model_path="lstmae.pth", scaler_path="scaler.gz"):
         self.feature_cols = feature_cols
         self.seq_len = seq_len
         self.model_path = model_path
@@ -61,29 +55,33 @@ class MetricPredictor():
             sequences.append(data[i:i + self.seq_len])
         return np.array(sequences)
 
-    def train(self, df, epochs=20, lr=1e-3):
+    def train(self, df, epochs=80, lr=5e-4, batch_size=64):
         data = df[self.feature_cols].values
         scaled_data = self.scaler.fit_transform(data)
         sequences = self.make_sequences(scaled_data)
         if len(sequences) == 0:
             print("Not enough data to train.")
             return
-        
-        X = torch.tensor(sequences, dtype=torch.float32).to(self.device)
+        X = torch.tensor(sequences, dtype=torch.float32)
         Y = X[:, -1, :]
-        optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        criterion = nn.MSELoss()
-
+        dataset = TensorDataset(X, Y)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+        optimizer = optim.AdamW(self.model.parameters(), lr=lr, weight_decay=1e-5)
+        criterion = nn.SmoothL1Loss()
         self.model.train()
         for e in range(epochs):
-            optimizer.zero_grad()
-            output = self.model(X)
-            loss = criterion(output, Y)
-            loss.backward()
-            optimizer.step()
-            if (e + 1) % 2 == 0:
-                print(f"[TRAIN] Epoch {e+1}/{epochs}, Loss: {loss.item():.6f}")
-
+            total_loss = 0
+            for xb, yb in dataloader:
+                xb, yb = xb.to(self.device), yb.to(self.device)
+                optimizer.zero_grad()
+                output = self.model(xb)
+                loss = criterion(output, yb)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                optimizer.step()
+                total_loss += loss.item()
+            if (e + 1) % 5 == 0:
+                print(f"[TRAIN] Epoch {e+1}/{epochs}, Loss: {total_loss/len(dataloader):.6f}")
         torch.save(self.model.state_dict(), self.model_path)
         joblib.dump(self.scaler, self.scaler_path)
         print("Model and scaler saved.")
@@ -96,35 +94,29 @@ class MetricPredictor():
         self.model.eval()
         print("Model and scaler loaded.")
 
-    def predict_df(self, df, threshold=2.0):
+    def predict_df(self, df):
         data = df[self.feature_cols].values
         scaled_data = self.scaler.transform(data)
         sequences = self.make_sequences(scaled_data)
         if len(sequences) == 0:
             print("Not enough data to predict.")
             return df
-
         X = torch.tensor(sequences, dtype=torch.float32).to(self.device)
         with torch.no_grad():
             reconstructed = self.model(X).cpu().numpy()
-
         reconstructed = self.scaler.inverse_transform(reconstructed)
         original = data[self.seq_len:]
-        errors = np.mean(np.abs(original - reconstructed), axis=1)
-        threshold = np.mean(errors) + 3 * np.std(errors)
+        errors = np.mean(np.square(original - reconstructed), axis=1)
+        threshold = np.mean(errors) + 2.5 * np.std(errors)
         anomalies = errors > threshold
-
         df_result = df.iloc[self.seq_len:].copy()
         df_result["reconstruction_error"] = errors
         df_result["anomaly"] = anomalies
-        return df_result
+        return df_result, reconstructed, errors
 
-def run_inference_df(df, model_path="model/lstmae.pth",scaler_path="model/scaler.gz", threshold=2.0, seq_len=10):
+def run_inference_df(df, model_path="model/lstmae.pth", scaler_path="model/scaler.gz", seq_len=30):
     feature_cols = [col for col in df.columns if col not in ["timestamp", "ds"]]
-    predictor = MetricPredictor(feature_cols=feature_cols,
-                                seq_len=seq_len,
-                                model_path=model_path,
-                                scaler_path=scaler_path)
+    predictor = MetricPredictor(feature_cols=feature_cols, seq_len=seq_len, model_path=model_path, scaler_path=scaler_path)
     predictor.load()
-    results = predictor.predict_df(df, threshold=threshold)
+    results = predictor.predict_df(df)
     return results
