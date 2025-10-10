@@ -7,4 +7,6 @@ PyYAML
 scikit-learn
 prophet
 torch
+streamlit
+matplotlib
 

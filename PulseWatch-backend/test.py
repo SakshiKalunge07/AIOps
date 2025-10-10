@@ -31,7 +31,7 @@ df = pd.read_csv(CSV_PATH)
 
 # --- CORRECTED COLUMN NAMES ---
 # Changed 'cpu_usage', 'memory_available', 'latency' to the correct 'cpu', 'memory', 'latency'
-df_anamolies = inject_spike_anomalies(df,columns=['cpu','memory','latency'],n_anomalies=5)
+df_anamolies = inject_spike_anomalies(df,columns=['cpu','memory','latency'],n_anomalies=10)
 
 train_lstm_from_df(df)
 lstm_result,reconstructed,errors = predict_lstm_from_df(df_anamolies)
