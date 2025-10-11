@@ -1,0 +1,42 @@
+site_name: PulseWatch AIOps Documentation
+site_description: Intelligent System Monitoring and Anomaly Detection Framework
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: light blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - content.code.annotate
+    - toc.integrate
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Introduction: introduction.md
+  - System Architecture: architecture.md
+  - Setup Guide: setup.md
+  - Usage: usage.md
+  - Configuration: configuration.md
+  - Modules:
+      - Dashboard (Streamlit): modules/dashboard.md
+      - Backend API (FastAPI): modules/backend_api.md
+      - Model Handler: modules/model_handler.md
+      - Model: modules/model.md
+      - Prometheus Integration: modules/prometheus_integration.md
+      - Testing: modules/testing.md
+  - Results: results.md
+  - Future Work: future_work.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+
