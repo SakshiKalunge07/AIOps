@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data           
+      - ./model:/app/model         
+      - ./app:/app/app            
+      - ./run.py:/app/run.py      
+    environment:
+      - PYTHONPATH=/app
+      - PROMETHEUS_URL=${PROMETHEUS_URL}
+    depends_on:
+      - prometheus
+      - node-exporter
+      - windows-exporter
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    env_file:
+      - .env
+
+  dashboard:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./dashboard.py:/app/dashboard.py
+    depends_on:
+      - api
+    command: streamlit run /app/dashboard.py --server.port 8501 --server.address 0.0.0.0
+    env_file:
+      - .env
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  windows-exporter:
+    image: stefanprodan/windows_exporter:latest
+    container_name: windows_exporter
+    ports:
+      - "9182:9182"
+
+  prometheus-fetcher:
+    build: .
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PROMETHEUS_URL=${PROMETHEUS_URL}
+    command: python app/prometheus.py
+    depends_on:
+      - prometheus
+      - node-exporter
+      - windows-exporter
+    env_file:
+      - .env
+
+volumes:
+  prometheus_data:

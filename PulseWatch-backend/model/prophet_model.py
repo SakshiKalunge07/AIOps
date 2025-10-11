@@ -34,7 +34,7 @@ def train_and_detect_prophet_df(df, metric_column="value", forecast_horizon=60):
 
 def detect_multimetric_anomalies_df(df, forecast_horizon=60):
     df = df.copy()
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"]).dt.tz_localize(None)
     results = {}
     metric_cols = [col for col in df.columns if col not in ["timestamp", "ds"]]
 

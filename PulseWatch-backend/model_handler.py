@@ -35,4 +35,6 @@ def predict_prophet_from_df(df):
     """Run Prophet-based anomaly detection on in-memory metrics DataFrame."""
     results = detect_multimetric_anomalies_df(df)
     print("Prophet anomaly detection complete.")
+    if isinstance(results, tuple):
+        results = results[0]
     return results

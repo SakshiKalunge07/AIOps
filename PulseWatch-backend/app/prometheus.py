@@ -3,12 +3,12 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from app.config import prometheus_url, metric_queries  # imported from config.py
+from app.config import prometheus_url, metric_queries 
 
 rolling_window_min = 180  
 step_second = "15s"       
 
-def prometheus_to_dataframe(prometheus_data, column_name: str) -> Optional[pd.DataFrame]:    #helper function for converting individual metrics to dataframe
+def prometheus_to_dataframe(prometheus_data, column_name: str) -> Optional[pd.DataFrame]:
     if not prometheus_data:
         return None
     raw_data = prometheus_data[0].get("values", [])
