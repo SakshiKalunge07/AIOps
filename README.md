@@ -275,4 +275,9 @@ Prometheus Metrics → Preprocessing → LSTMAE (Anomalies) → Prophet (Forecas
 - Add auto-scaling ML model retraining pipeline
 - Enhance dashboard with Grafana integration
 
+## ontributors
+- [**Sakshi Kalunge**](https://github.com/SakshiKalunge07)
+- [**Anushree Upasham**](https://github.com/annuuxoxo)
+
+
 For more details, refer to the full documentation in the `documentation/docs/` folder, built with MkDocs (config in `documentation/mkdocs.yml`).
