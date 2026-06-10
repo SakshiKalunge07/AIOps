@@ -25,11 +25,6 @@ metrics:
       Linux: "node_disk_io_time_seconds_total"
       Darwin: "node_disk_io_time_seconds_total"
 
-model:
-  enabled: false
-  path: "backend/app/models/anomaly_model.pkl"
-  type: "classification"
-
 lstm_model:
   enabled: true
   model_path: "model/lstmae.pth"

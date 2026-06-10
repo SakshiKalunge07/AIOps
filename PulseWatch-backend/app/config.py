@@ -19,4 +19,3 @@ metric_queries = {
     "latency": metrics_config["latency"]["query"][os_type],  
 }
 
-model_config = USER_CONFIG.get("model", {})
